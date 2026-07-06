@@ -9,7 +9,11 @@
     <description>Desktop controller for microHAM ARCO over LAN/TCP</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>GNU General Public License v3.0 or later</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0-standalone.html</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <developers>
         <developer/>

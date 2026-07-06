@@ -156,4 +156,6 @@ If result is outside `0-360`, command is not sent and an error is shown.
 
 ## License
 
-No license file is currently defined in this repository.
+This project is licensed under the GNU General Public License v3.0 or later (`GPL-3.0-or-later`).
+
+You may use, study, share, and modify the application. If you distribute modified versions, they must remain open source under the same GPL terms. See `LICENSE` for the full license text.
