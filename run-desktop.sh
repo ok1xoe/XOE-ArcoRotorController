@@ -3,4 +3,4 @@ set -eu
 
 cd "$(dirname "$0")"
 ./mvnw -q -DskipTests package
-java -jar target/XOE-MacRotorController-0.0.1-SNAPSHOT.jar
+java -jar target/XOE-MacRotorController-1.0.0.jar

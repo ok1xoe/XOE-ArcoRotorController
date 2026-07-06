@@ -45,13 +45,51 @@ Build the runnable JAR:
 The generated application file is:
 
 ```text
-target/XOE-MacRotorController-0.0.1-SNAPSHOT.jar
+target/XOE-MacRotorController-1.0.0.jar
 ```
 
 You can run it directly:
 
 ```bash
-java -jar target/XOE-MacRotorController-0.0.1-SNAPSHOT.jar
+java -jar target/XOE-MacRotorController-1.0.0.jar
+```
+
+## Build Installer Package
+
+`jpackage` creates native installers, but only for the OS where you run it.
+
+- macOS: run on macOS (`dmg` or `pkg`)
+- Windows: run on Windows (`msi` or `exe`)
+- Linux: run on Linux (`deb` or `rpm`, depending on available tooling)
+
+macOS (default `dmg`):
+
+```bash
+./build-installer.sh
+```
+
+macOS (explicit format, for example `pkg`):
+
+```bash
+./build-installer.sh pkg
+```
+
+Windows (default `msi`):
+
+```bat
+build-installer.cmd
+```
+
+Windows (explicit format, for example `exe`):
+
+```bat
+build-installer.cmd exe
+```
+
+Installer output directory:
+
+```text
+target/installer
 ```
 
 ## First Connection
