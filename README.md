@@ -1,4 +1,4 @@
-# XOE MacRotorController
+# XOE ArcoRotorController
 
 Cross-platform desktop application for controlling a microHAM ARCO rotator controller over LAN/TCP.
 
@@ -51,13 +51,13 @@ These scripts build the runnable JAR and then start the app.
 Output JAR:
 
 ```text
-target/XOE-MacRotorController-1.0.0.jar
+target/XOE-ArcoRotorController-1.0.0.jar
 ```
 
 Run manually:
 
 ```bash
-java -jar target/XOE-MacRotorController-1.0.0.jar
+java -jar target/XOE-ArcoRotorController-1.0.0.jar
 ```
 
 ## Build Native Installers
@@ -147,7 +147,7 @@ If result is outside `0-360`, command is not sent and an error is shown.
 
 ## Project Structure (important files)
 
-- `src/main/java/.../MacRotorDesktopApplication.java` – application entry point
+- `src/main/java/.../ArcoRotorDesktopApplication.java` – application entry point
 - `src/main/java/.../TcpRotorClient.java` – TCP communication with ARCO
 - `run-desktop.sh`, `run-desktop.cmd` – quick run scripts
 - `build-installer.sh`, `build-installer.cmd` – native installer scripts

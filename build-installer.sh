@@ -3,15 +3,43 @@ set -eu
 
 cd "$(dirname "$0")"
 
-APP_NAME="XOE-MacRotorController"
+APP_NAME="Arco Rotor Controller"
 APP_VERSION="1.0.0"
-MAIN_JAR="${APP_NAME}-${APP_VERSION}.jar"
-MAIN_CLASS="cz.ok1xoe.macrotor.desktop.MacRotorDesktopApplication"
+MAIN_JAR="XOE-ArcoRotorController-${APP_VERSION}.jar"
+MAIN_CLASS="cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication"
 DEST_DIR="target/installer"
-TYPE="${1:-dmg}"
+JPACKAGE_EXTRA_ARGS=""
+if [ "$#" -gt 0 ]; then
+  TYPE="$1"
+else
+  case "$(uname -s)" in
+    Darwin) TYPE="dmg" ;;
+    Linux) TYPE="app-image" ;;
+    *) TYPE="app-image" ;;
+  esac
+fi
+
+case "$TYPE" in
+  dmg|pkg)
+    ICON="src/main/resources/icons/macos/xoe-arc-compass.icns"
+    ;;
+  exe|msi)
+    ICON="src/main/resources/icons/windows/xoe-arc-compass.ico"
+    ;;
+  *)
+    ICON="src/main/resources/icons/png/xoe-arc-compass-512x512.png"
+    ;;
+esac
+
+case "$TYPE" in
+  deb|rpm)
+    JPACKAGE_EXTRA_ARGS="--linux-package-name arco-rotor-controller"
+    ;;
+esac
 
 ./mvnw -q -DskipTests package
 
+rm -rf "$DEST_DIR"
 mkdir -p "$DEST_DIR"
 
 jpackage \
@@ -22,6 +50,7 @@ jpackage \
   --main-jar "$MAIN_JAR" \
   --main-class "$MAIN_CLASS" \
   --app-version "$APP_VERSION" \
-  --icon src/main/resources/icons/macos/xoe-mrc-compass.icns
+  --icon "$ICON" \
+  $JPACKAGE_EXTRA_ARGS
 
 echo "Installer created in: $DEST_DIR"

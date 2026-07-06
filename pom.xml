@@ -3,9 +3,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>cz.ok1xoe</groupId>
-    <artifactId>XOE-MacRotorController</artifactId>
+    <artifactId>XOE-ArcoRotorController</artifactId>
     <version>1.0.0</version>
-    <name>XOE MacRotorController</name>
+    <name>XOE ArcoRotorController</name>
     <description>Desktop controller for microHAM ARCO over LAN/TCP</description>
     <url/>
     <licenses>
@@ -63,7 +63,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>cz.ok1xoe.macrotor.desktop.MacRotorDesktopApplication</mainClass>
+                            <mainClass>cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

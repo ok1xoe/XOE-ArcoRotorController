@@ -1,6 +1,6 @@
-# XOE MacRotorController
+# XOE ArcoRotorController
 
-XOE MacRotorController is a cross-platform desktop application for controlling a microHAM ARCO rotator controller over LAN/TCP.
+XOE ArcoRotorController is a cross-platform desktop application for controlling a microHAM ARCO rotator controller over LAN/TCP.
 
 The application communicates directly with ARCO through a TCP socket using the Yaesu GS-232 control protocol. It does not use a REST API, USB serial control, or a background server.
 
@@ -45,13 +45,13 @@ Build the runnable JAR:
 The generated application file is:
 
 ```text
-target/XOE-MacRotorController-1.0.0.jar
+target/XOE-ArcoRotorController-1.0.0.jar
 ```
 
 You can run it directly:
 
 ```bash
-java -jar target/XOE-MacRotorController-1.0.0.jar
+java -jar target/XOE-ArcoRotorController-1.0.0.jar
 ```
 
 ## Build Installer Package
@@ -193,7 +193,7 @@ The default language is EN. The selected language is stored locally using Java P
 
 ## Protocol Commands
 
-XOE MacRotorController uses these GS-232-compatible commands:
+XOE ArcoRotorController uses these GS-232-compatible commands:
 
 ```text
 C       read current azimuth

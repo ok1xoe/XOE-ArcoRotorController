@@ -1,9 +1,30 @@
-name: Build all platforms
+name: Build and release packages
 
 on:
   push:
     branches: [ "main", "master" ]
+    tags: [ "v*" ]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create or update
+        required: true
+        default: v1.0.0
+      publish_release:
+        description: Upload packages to the GitHub release
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  INSTALLED_APP_NAME: Arco Rotor Controller
+  APP_VERSION: 1.0.0
+  MAIN_CLASS: cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   build:
@@ -11,14 +32,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            package_type: deb
+            artifact_name: linux-package
+          - os: windows-latest
+            package_type: msi
+            artifact_name: windows-package
+          - os: macos-latest
+            package_type: dmg
+            artifact_name: macos-package
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java 26
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '26'
@@ -32,32 +62,68 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot rpm
-          jpackage \
-            --name XOE-MacRotorController \
-            --type deb \
-            --dest target/installer \
-            --input target \
-            --main-jar XOE-MacRotorController-1.0.0.jar \
-            --main-class cz.ok1xoe.macrotor.desktop.MacRotorDesktopApplication \
-            --app-version 1.0.0 \
-            --icon src/main/resources/icons/linux/hicolor/256x256/apps/xoe-mrc-compass.png
+          sudo apt-get install -y fakeroot
+          chmod +x mvnw build-installer.sh
+          ./build-installer.sh "${{ matrix.package_type }}"
+        shell: bash
 
       - name: Build installer (macOS)
         if: runner.os == 'macOS'
         run: |
-          chmod +x build-installer.sh
-          ./build-installer.sh dmg
+          chmod +x mvnw build-installer.sh
+          ./build-installer.sh "${{ matrix.package_type }}"
+        shell: bash
 
       - name: Build installer (Windows)
         if: runner.os == 'Windows'
-        run: build-installer.cmd msi
+        run: build-installer.cmd ${{ matrix.package_type }}
         shell: cmd
 
+      - name: Prepare package artifact
+        run: |
+          mkdir -p release-assets
+          cp target/installer/* release-assets/
+        shell: bash
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ runner.os }}-artifacts
-          path: |
-            target/*.jar
-            target/installer/*
+          name: ${{ matrix.artifact_name }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "*-package"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            release_tag="${GITHUB_REF_NAME}"
+          else
+            release_tag="${RELEASE_TAG_INPUT:-v1.0.0}"
+          fi
+
+          if ! gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release create "$release_tag" \
+              --target "$GITHUB_SHA" \
+              --title "$release_tag" \
+              --notes "Release $release_tag"
+          fi
+
+          gh release upload "$release_tag" release-assets/* --clobber
