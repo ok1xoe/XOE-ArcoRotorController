@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="XOE MacRotorController icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="XOE ArcoRotorController icon">
   <defs>
     <linearGradient id="bg" x1="120" y1="80" x2="904" y2="944" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#102333"/>
@@ -40,6 +40,6 @@
           font-size="344"
           font-weight="900"
           letter-spacing="4"
-          fill="#f7fbfc">MRC</text>
+          fill="#f7fbfc">ARC</text>
   </g>
 </svg>
