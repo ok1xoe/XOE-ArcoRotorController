@@ -1,0 +1,63 @@
+name: Build all platforms
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 26
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '26'
+          cache: maven
+
+      - name: Build JAR
+        run: ./mvnw -B -DskipTests package
+        shell: bash
+
+      - name: Build installer (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot rpm
+          jpackage \
+            --name XOE-MacRotorController \
+            --type deb \
+            --dest target/installer \
+            --input target \
+            --main-jar XOE-MacRotorController-1.0.0.jar \
+            --main-class cz.ok1xoe.macrotor.desktop.MacRotorDesktopApplication \
+            --app-version 1.0.0 \
+            --icon src/main/resources/icons/linux/hicolor/256x256/apps/xoe-mrc-compass.png
+
+      - name: Build installer (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          chmod +x build-installer.sh
+          ./build-installer.sh dmg
+
+      - name: Build installer (Windows)
+        if: runner.os == 'Windows'
+        run: build-installer.cmd msi
+        shell: cmd
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-artifacts
+          path: |
+            target/*.jar
+            target/installer/*
