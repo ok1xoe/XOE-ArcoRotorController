@@ -100,6 +100,7 @@ target/installer
 4. The large azimuth display should start showing the current heading.
 
 The current azimuth is polled every 150 ms.
+Connection state is indicated by the `Connect` / `Disconnect` button and status messages.
 
 ## Main Controls
 
@@ -107,7 +108,7 @@ The current azimuth is polled every 150 ms.
 
 The large number shows the current azimuth reported by ARCO.
 
-Double-click the large number to enter a target azimuth manually. Press `Enter` to send it.
+Enter a target azimuth directly in the large azimuth field and press `Enter` to send it.
 
 Allowed absolute target range:
 
@@ -156,6 +157,10 @@ Click inside the compass to send a target azimuth.
 
 - Red line: current azimuth
 - Blue line: target azimuth
+- Degree labels are shown every `30°`.
+- Cardinal directions are localized (`N`, `E`, `S`, `W` in English; `S`, `V`, `J`, `Z` in Czech).
+
+The `Target Azimuth` panel shows the last target azimuth sent from the large azimuth field, compass, or preset.
 
 ### Manual Rotation
 
@@ -165,10 +170,13 @@ Use `CCW` and `CW` for manual rotation.
 - Press and hold `CW` to rotate clockwise.
 - Releasing the button sends the `S` stop command.
 - Moving the mouse out of the button while holding it also sends stop.
+- Click `STOP` to send an immediate stop command.
+- Set `Speed` from `1` to `4` to change ARCO rotation speed (`1` slowest, `4` fastest).
+- The selected speed is stored locally and sent to ARCO after connecting.
 
 ### Presets
 
-There are 10 editable preset buttons.
+There are 10 editable preset buttons shown at the bottom of the main window in two rows of five buttons.
 
 - Left-click a preset to send its stored azimuth.
 - Right-click a preset to edit its label and azimuth.
@@ -201,6 +209,7 @@ M150    rotate to azimuth 150
 L       manual counter-clockwise rotation
 R       manual clockwise rotation
 S       stop
+X1-X4   set rotation speed
 ```
 
 Commands are sent to ARCO over TCP and terminated with carriage return (`\r`).

@@ -8,9 +8,10 @@ No REST API, USB serial bridge, or background server is required.
 ## Features
 
 - Live azimuth readout (polling every 150 ms)
-- Click-to-rotate compass control
+- Click-to-rotate compass control with degree labels and localized cardinal directions
 - Manual absolute azimuth input (`0-360`)
 - Relative input support (`+10`, `-45`)
+- Editable preset buttons for frequently used azimuths
 - Input validation with clear error handling
 - Cross-platform build and installer workflow (macOS, Windows, Linux)
 
@@ -114,7 +115,18 @@ target/installer
 ### Current Azimuth
 
 - Displays current heading reported by ARCO.
-- Double-click value to enter target azimuth, press `Enter` to send.
+- Enter a target azimuth directly in the large azimuth field and press `Enter` to send.
+
+### Target Azimuth
+
+- Shows the last sent target azimuth.
+
+### Manual Rotation
+
+- Press and hold `CCW` / `CW` for manual rotation.
+- Releasing the button sends `S` stop.
+- `STOP` sends an immediate stop command.
+- `Speed` sends GS-232 `X1` to `X4` speed commands and is remembered between starts.
 
 ### Absolute Input
 
@@ -144,6 +156,14 @@ If result is outside `0-360`, command is not sent and an error is shown.
 ### Compass
 
 - Click inside the compass to send target azimuth.
+- The compass shows degree labels every `30°` and localized cardinal directions.
+
+### Presets
+
+- Presets are shown at the bottom in two rows of five buttons.
+- Click a preset to send its stored azimuth.
+- Right-click a preset to edit its label and azimuth.
+- Hold a preset for 3 seconds to store the currently reported azimuth.
 
 ## Project Structure (important files)
 

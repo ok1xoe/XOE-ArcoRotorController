@@ -4,6 +4,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -11,6 +12,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -18,6 +20,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.border.TitledBorder;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -32,6 +35,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -76,6 +80,8 @@ public class ArcoRotorDesktopApplication {
     private static final Color ACTION_GREEN = new Color(40, 132, 97);
     private static final Color WARNING_RED = new Color(178, 54, 50);
     private static final Color BUTTON_BACKGROUND = new Color(252, 253, 253);
+    private static final float UI_FONT_SIZE = 15f;
+    private static final float BUTTON_FONT_SIZE = 15f;
     private static final long POLL_INTERVAL_MS = 150;
     private static final int MAX_TARGET_AZIMUTH = 360;
     private static final int MAX_SCAN_HOSTS = 1024;
@@ -94,7 +100,7 @@ public class ArcoRotorDesktopApplication {
     private static final class ArcoRotorFrame extends JFrame {
 
         private final JComboBox<String> hostCombo = new JComboBox<>();
-        private final JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(4001, 1, 65535, 1));
+        private final JTextField portField = new JTextField("4001", 6);
         private final JComboBox<Language> languageCombo = new JComboBox<>(Language.values());
         private final JButton scanButton = new JButton("Scan");
         private final JButton connectButton = new JButton("Pripojit");
@@ -113,9 +119,18 @@ public class ArcoRotorDesktopApplication {
         private final CompassPanel compassPanel = new CompassPanel(this::moveToClickedAzimuth);
         private final JButton ccwButton = new JButton("CCW");
         private final JButton cwButton = new JButton("CW");
+        private final JButton stopButton = new JButton("STOP");
+        private final JLabel speedLabel = createFormLabel("");
+        private final JSlider speedSlider = new JSlider(SwingConstants.HORIZONTAL, 1, 4, 4);
+        private final JLabel targetAzimuthValueLabel = new JLabel("---", SwingConstants.CENTER);
         private final PresetStore presetStore = new PresetStore();
         private final PresetButton[] presetButtons = new PresetButton[10];
         private final List<String> communicationLogEntries = new ArrayList<>();
+        private final TitledBorder connectionBorder = BorderFactory.createTitledBorder("");
+        private final TitledBorder currentAzimuthBorder = BorderFactory.createTitledBorder("");
+        private final TitledBorder targetAzimuthBorder = BorderFactory.createTitledBorder("");
+        private final TitledBorder manualControlBorder = BorderFactory.createTitledBorder("");
+        private final TitledBorder presetsBorder = BorderFactory.createTitledBorder("");
 
         private ScheduledExecutorService executor;
         private ScheduledFuture<?> pollingTask;
@@ -136,7 +151,7 @@ public class ArcoRotorDesktopApplication {
             this.i18n = new I18n(Language.fromCode(windowPreferences.get("language", Language.EN.code())));
             this.communicationLogWindow = new CommunicationLogWindow();
             setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            setMinimumSize(new Dimension(900, 660));
+            setMinimumSize(new Dimension(1080, 680));
             setLocationByPlatform(true);
             setJMenuBar(createApplicationMenuBar());
 
@@ -155,12 +170,19 @@ public class ArcoRotorDesktopApplication {
                 hostCombo.addItem(savedHost);
             }
             hostCombo.setSelectedItem(savedHost);
-            hostCombo.setPreferredSize(new Dimension(190, 30));
+            hostCombo.setFont(hostCombo.getFont().deriveFont(UI_FONT_SIZE));
+            hostCombo.setPreferredSize(new Dimension(260, 44));
+            portField.setHorizontalAlignment(SwingConstants.RIGHT);
+            portField.setFont(portField.getFont().deriveFont(UI_FONT_SIZE));
+            portField.setPreferredSize(new Dimension(110, 44));
+            languageCombo.setFont(languageCombo.getFont().deriveFont(UI_FONT_SIZE));
 
             connectButton.addActionListener(event -> toggleConnection());
             scanButton.addActionListener(event -> scanNetworkForArco());
             languageCombo.setSelectedItem(i18n.language());
             languageCombo.addActionListener(event -> changeLanguage((Language) languageCombo.getSelectedItem()));
+            speedSlider.setValue(clampRotationSpeed(windowPreferences.getInt("rotationSpeed", 4)));
+            speedSlider.addChangeListener(event -> changeRotationSpeed());
             updateTexts();
 
             addWindowListener(new WindowAdapter() {
@@ -184,11 +206,11 @@ public class ArcoRotorDesktopApplication {
         }
 
         private JPanel createTopPanel() {
-            JPanel connectionPanel = new JPanel(new GridBagLayout());
-            connectionPanel.setOpaque(false);
+            JPanel connectionPanel = createSectionPanel(connectionBorder, new GridBagLayout());
             GridBagConstraints constraints = new GridBagConstraints();
             constraints.insets = new Insets(0, 0, 0, 10);
             constraints.gridy = 0;
+            constraints.anchor = GridBagConstraints.CENTER;
 
             constraints.gridx = 0;
             connectionPanel.add(ipLabel, constraints);
@@ -200,8 +222,7 @@ public class ArcoRotorDesktopApplication {
             constraints.fill = GridBagConstraints.NONE;
             connectionPanel.add(tcpPortLabel, constraints);
             constraints.gridx = 3;
-            portSpinner.setPreferredSize(new Dimension(90, 30));
-            connectionPanel.add(portSpinner, constraints);
+            connectionPanel.add(portField, constraints);
 
             constraints.gridx = 4;
             styleCommandButton(scanButton, TARGET_BLUE, Color.WHITE);
@@ -215,40 +236,74 @@ public class ArcoRotorDesktopApplication {
             connectionPanel.add(languageLabel, constraints);
 
             constraints.gridx = 7;
-            languageCombo.setPreferredSize(new Dimension(74, 30));
+            languageCombo.setPreferredSize(new Dimension(110, 44));
             connectionPanel.add(languageCombo, constraints);
+
+            constraints.gridx = 8;
+            constraints.weightx = 1;
+            JPanel spacer = new JPanel();
+            spacer.setOpaque(false);
+            connectionPanel.add(spacer, constraints);
 
             return connectionPanel;
         }
 
+        private JPanel createSectionPanel(TitledBorder border, LayoutManager layout) {
+            JPanel panel = new JPanel(layout);
+            panel.setBackground(PANEL_BACKGROUND);
+            panel.setBorder(BorderFactory.createCompoundBorder(
+                    border,
+                    BorderFactory.createEmptyBorder(8, 10, 10, 10)
+            ));
+            border.setTitleFont(new Font(Font.SANS_SERIF, Font.BOLD, (int) UI_FONT_SIZE));
+            return panel;
+        }
+
         private JPanel createManualRotatePanel() {
-            JPanel panel = new JPanel(new GridBagLayout());
+            JPanel panel = new JPanel(new BorderLayout(0, 2));
             panel.setOpaque(false);
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.insets = new Insets(0, 0, 0, 10);
-            constraints.gridy = 0;
 
             configureManualRotateButton(ccwButton, false);
             configureManualRotateButton(cwButton, true);
+            styleCommandButton(stopButton, WARNING_RED, Color.WHITE);
+            stopButton.setPreferredSize(new Dimension(140, 70));
+            stopButton.setFont(stopButton.getFont().deriveFont(Font.BOLD, BUTTON_FONT_SIZE));
+            stopButton.addActionListener(event -> stopRotation());
 
-            constraints.gridx = 0;
-            panel.add(ccwButton, constraints);
+            JPanel buttonsPanel = new JPanel(new GridLayout(1, 3, 10, 0));
+            buttonsPanel.setOpaque(false);
+            buttonsPanel.add(ccwButton);
+            buttonsPanel.add(stopButton);
+            buttonsPanel.add(cwButton);
 
-            constraints.gridx = 1;
-            panel.add(cwButton, constraints);
+            speedSlider.setMajorTickSpacing(1);
+            speedSlider.setPaintTicks(true);
+            speedSlider.setPaintLabels(true);
+            speedSlider.setSnapToTicks(true);
+            speedSlider.setOpaque(false);
+            speedSlider.setFont(speedSlider.getFont().deriveFont(UI_FONT_SIZE));
+            speedSlider.setPreferredSize(new Dimension(210, 42));
+
+            JPanel speedPanel = new JPanel(new BorderLayout(8, 0));
+            speedPanel.setOpaque(false);
+            speedPanel.add(speedLabel, BorderLayout.WEST);
+            speedPanel.add(speedSlider, BorderLayout.CENTER);
+
+            panel.add(buttonsPanel, BorderLayout.NORTH);
+            panel.add(speedPanel, BorderLayout.SOUTH);
 
             return panel;
         }
 
         private void configureManualRotateButton(JButton button, boolean clockwise) {
-            button.setPreferredSize(new Dimension(120, 58));
-            button.setFont(button.getFont().deriveFont(Font.BOLD, 18f));
+            button.setPreferredSize(new Dimension(140, 70));
+            button.setFont(button.getFont().deriveFont(Font.BOLD, BUTTON_FONT_SIZE));
             button.setFocusPainted(false);
             button.setOpaque(true);
-            button.setBackground(BUTTON_BACKGROUND);
-            button.setForeground(TEXT_PRIMARY);
+            button.setBackground(TARGET_BLUE);
+            button.setForeground(Color.WHITE);
             button.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BORDER_COLOR),
+                    BorderFactory.createLineBorder(TARGET_BLUE.darker()),
                     BorderFactory.createEmptyBorder(8, 14, 8, 14)
             ));
             button.addMouseListener(new MouseAdapter() {
@@ -278,7 +333,7 @@ public class ArcoRotorDesktopApplication {
         private static JLabel createFormLabel(String text) {
             JLabel label = new JLabel(text);
             label.setForeground(TEXT_SECONDARY);
-            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+            label.setFont(label.getFont().deriveFont(Font.BOLD, UI_FONT_SIZE));
             return label;
         }
 
@@ -286,6 +341,7 @@ public class ArcoRotorDesktopApplication {
             button.setOpaque(true);
             button.setBackground(background);
             button.setForeground(foreground);
+            button.setFont(button.getFont().deriveFont(Font.BOLD, BUTTON_FONT_SIZE));
             button.setFocusPainted(false);
             button.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(background.darker()),
@@ -309,21 +365,34 @@ public class ArcoRotorDesktopApplication {
             ipLabel.setText(t("label.ip"));
             tcpPortLabel.setText(t("label.tcpPort"));
             languageLabel.setText(t("label.language"));
+            connectionBorder.setTitle(t("label.connection"));
+            currentAzimuthBorder.setTitle(t("label.currentAzimuth"));
+            targetAzimuthBorder.setTitle(t("label.targetAzimuth"));
+            manualControlBorder.setTitle(t("label.manualControl"));
+            presetsBorder.setTitle(t("label.presets"));
             communicationLogWindow.updateTexts();
             scanButton.setText(t("button.scan"));
             connectButton.setText(connected ? t("button.disconnect") : t("button.connect"));
-            ccwButton.setText(t("button.ccw"));
-            cwButton.setText(t("button.cw"));
+            ccwButton.setText("<html><center>&#9664;&#9664;<br>" + t("button.ccw") + "</center></html>");
+            cwButton.setText("<html><center>&#9654;&#9654;<br>" + t("button.cw") + "</center></html>");
+            stopButton.setText(t("button.stop"));
+            speedLabel.setText(t("label.speed"));
             captionLabel.setText(t("label.currentAzimuth"));
             headingLabel.setToolTipText(t("tooltip.heading"));
             hintLabel.setText(t("hint.main"));
-            compassPanel.setDegreeSuffix(t("degree"));
+            compassPanel.setCardinalLabels(t("compass.north"), t("compass.east"), t("compass.south"), t("compass.west"));
+            updateConnectionStatus();
+            updateTargetHeadingLabel();
             for (PresetButton presetButton : presetButtons) {
                 if (presetButton != null) {
                     presetButton.refreshText();
                 }
             }
             updateStatusVisibility();
+            repaint();
+        }
+
+        private void updateConnectionStatus() {
         }
 
         private String t(String key) {
@@ -342,15 +411,45 @@ public class ArcoRotorDesktopApplication {
             constraints.fill = GridBagConstraints.BOTH;
             constraints.weighty = 1;
 
-            JPanel readoutPanel = new JPanel(new BorderLayout(0, 0));
-            readoutPanel.setBackground(PANEL_BACKGROUND);
-            readoutPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BORDER_COLOR),
-                    BorderFactory.createEmptyBorder(18, 18, 18, 18)
-            ));
-            captionLabel.setFont(captionLabel.getFont().deriveFont(Font.BOLD, 30f));
-            captionLabel.setForeground(TEXT_SECONDARY);
-            captionLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            constraints.gridx = 0;
+            constraints.weightx = 0.26;
+            panel.add(createLeftControlPanel(), constraints);
+
+            constraints.gridx = 1;
+            constraints.weightx = 0.52;
+            compassPanel.setPreferredSize(new Dimension(420, 420));
+            panel.add(compassPanel, constraints);
+
+            return panel;
+        }
+
+        private JPanel createLeftControlPanel() {
+            JPanel panel = new JPanel(new GridBagLayout());
+            panel.setOpaque(false);
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.fill = GridBagConstraints.BOTH;
+            constraints.weightx = 1;
+            constraints.insets = new Insets(0, 0, 8, 0);
+
+            constraints.gridy = 0;
+            constraints.weighty = 0.48;
+            panel.add(createCurrentAzimuthPanel(), constraints);
+
+            constraints.gridy = 1;
+            constraints.weighty = 0.18;
+            panel.add(createTargetAzimuthPanel(), constraints);
+
+            constraints.gridy = 2;
+            constraints.weighty = 0.34;
+            constraints.insets = new Insets(0, 0, 0, 0);
+            panel.add(createManualControlPanel(), constraints);
+
+            return panel;
+        }
+
+        private JPanel createCurrentAzimuthPanel() {
+            JPanel panel = createSectionPanel(currentAzimuthBorder, new BorderLayout(0, 8));
             headingLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 118));
             headingLabel.setForeground(TEXT_PRIMARY);
             headingLabel.addMouseListener(new MouseAdapter() {
@@ -380,42 +479,45 @@ public class ArcoRotorDesktopApplication {
             headingCards.setMinimumSize(new Dimension(260, 150));
             headingCards.add(headingLabel, "readout");
             headingCards.add(headingEditField, "edit");
+
             statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
             statusLabel.setVerticalAlignment(SwingConstants.CENTER);
             statusLabel.setOpaque(true);
-            statusLabel.setPreferredSize(new Dimension(320, 66));
-            statusLabel.setMinimumSize(new Dimension(320, 66));
+            statusLabel.setPreferredSize(new Dimension(260, 50));
+            statusLabel.setMinimumSize(new Dimension(260, 50));
             statusLabel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(BORDER_COLOR),
                     BorderFactory.createEmptyBorder(7, 10, 7, 10)
             ));
-            readoutPanel.add(captionLabel, BorderLayout.NORTH);
-            readoutPanel.add(headingCards, BorderLayout.CENTER);
 
-            JPanel southPanel = new JPanel(new BorderLayout(0, 10));
-            southPanel.setOpaque(false);
-            southPanel.add(statusLabel, BorderLayout.NORTH);
-            southPanel.add(createManualRotatePanel(), BorderLayout.SOUTH);
-            readoutPanel.add(southPanel, BorderLayout.SOUTH);
+            panel.add(headingCards, BorderLayout.CENTER);
+            panel.add(statusLabel, BorderLayout.SOUTH);
+            return panel;
+        }
 
-            constraints.gridx = 0;
-            constraints.weightx = 0.48;
-            panel.add(readoutPanel, constraints);
+        private JPanel createTargetAzimuthPanel() {
+            JPanel panel = createSectionPanel(targetAzimuthBorder, new BorderLayout(0, 0));
 
-            constraints.gridx = 1;
-            constraints.weightx = 0.52;
-            panel.add(compassPanel, constraints);
+            targetAzimuthValueLabel.setFont(targetAzimuthValueLabel.getFont().deriveFont(Font.BOLD, 42f));
+            targetAzimuthValueLabel.setForeground(TARGET_BLUE);
+            targetAzimuthValueLabel.setPreferredSize(new Dimension(180, 42));
+            panel.add(targetAzimuthValueLabel, BorderLayout.CENTER);
 
             return panel;
         }
 
+        private JPanel createManualControlPanel() {
+            JPanel panel = createSectionPanel(manualControlBorder, new BorderLayout(0, 0));
+            panel.add(createManualRotatePanel(), BorderLayout.CENTER);
+            return panel;
+        }
+
         private JPanel createBottomPanel() {
-            JPanel panel = new JPanel(new BorderLayout(0, 12));
+            JPanel panel = new JPanel(new BorderLayout(0, 0));
             panel.setOpaque(false);
 
             hintLabel.setForeground(TEXT_SECONDARY);
 
-            panel.add(hintLabel, BorderLayout.NORTH);
             panel.add(createPresetPanel(), BorderLayout.CENTER);
 
             return panel;
@@ -431,8 +533,7 @@ public class ArcoRotorDesktopApplication {
         }
 
         private JPanel createPresetPanel() {
-            JPanel panel = new JPanel(new GridLayout(2, 5, 8, 8));
-            panel.setOpaque(false);
+            JPanel panel = createSectionPanel(presetsBorder, new GridLayout(2, 5, 6, 6));
 
             for (int index = 0; index < presetButtons.length; index++) {
                 Preset preset = presetStore.load(index);
@@ -455,13 +556,16 @@ public class ArcoRotorDesktopApplication {
         private void connect() {
             try {
                 String host = selectedHost();
-                client = new TcpRotorClient(host, (Integer) portSpinner.getValue(), this::recordCommunication);
+                client = new TcpRotorClient(host, selectedPort(), this::recordCommunication);
                 windowPreferences.put("host", host);
                 executor = Executors.newSingleThreadScheduledExecutor();
                 connected = true;
                 setConnectionControls(false);
                 connectButton.setText(t("button.disconnect"));
+                updateConnectionStatus();
                 clearStatus();
+                int speed = speedSlider.getValue();
+                executor.execute(() -> applyRotationSpeed(speed));
                 executor.execute(this::pollHeading);
                 pollingTask = executor.scheduleAtFixedRate(this::pollHeading, POLL_INTERVAL_MS, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
             } catch (RuntimeException exception) {
@@ -483,12 +587,12 @@ public class ArcoRotorDesktopApplication {
             }
             client = null;
             currentHeading = null;
-            targetHeading = null;
             refreshHeadingAfterRelativeError = false;
             setActivePresetButton(null);
-            compassPanel.setTargetHeading(null);
+            setTargetHeading(null);
             setConnectionControls(true);
             connectButton.setText(t("button.connect"));
+            updateConnectionStatus();
             clearStatus();
         }
 
@@ -557,8 +661,7 @@ public class ArcoRotorDesktopApplication {
                 return;
             }
 
-            targetHeading = target;
-            compassPanel.setTargetHeading(target);
+            setTargetHeading(target);
             setActivePresetButton(presetButton);
             clearStatus();
             executor.execute(() -> {
@@ -581,8 +684,7 @@ public class ArcoRotorDesktopApplication {
             }
 
             setActivePresetButton(null);
-            targetHeading = null;
-            compassPanel.setTargetHeading(null);
+            setTargetHeading(null);
             clearStatus();
             executor.execute(() -> {
                 try {
@@ -604,6 +706,21 @@ public class ArcoRotorDesktopApplication {
                 return;
             }
 
+            sendStopCommand();
+        }
+
+        private void stopRotation() {
+            showHeadingReadout();
+            refreshHeadingAfterRelativeErrorIfNeeded();
+            if (!connected || executor == null || client == null) {
+                showError(t("status.stopConnectFirst"));
+                return;
+            }
+
+            sendStopCommand();
+        }
+
+        private void sendStopCommand() {
             clearStatus();
             executor.execute(() -> {
                 try {
@@ -614,6 +731,52 @@ public class ArcoRotorDesktopApplication {
                     SwingUtilities.invokeLater(() -> showError(exception.getMessage()));
                 }
             });
+        }
+
+        private void changeRotationSpeed() {
+            int speed = speedSlider.getValue();
+            windowPreferences.putInt("rotationSpeed", speed);
+            if (!connected || executor == null || client == null) {
+                return;
+            }
+
+            executor.execute(() -> applyRotationSpeed(speed));
+        }
+
+        private void applyRotationSpeed(int speed) {
+            TcpRotorClient currentClient = client;
+            if (!connected || currentClient == null) {
+                return;
+            }
+
+            try {
+                currentClient.setRotationSpeed(speed);
+                SwingUtilities.invokeLater(this::clearStatus);
+            } catch (RuntimeException exception) {
+                SwingUtilities.invokeLater(() -> showError(exception.getMessage()));
+            }
+        }
+
+        private static int clampRotationSpeed(int speed) {
+            return Math.max(1, Math.min(4, speed));
+        }
+
+        private void setTargetHeading(Integer heading) {
+            targetHeading = heading;
+            compassPanel.setTargetHeading(heading);
+            updateTargetHeadingLabel();
+        }
+
+        private void updateTargetHeadingLabel() {
+            if (targetHeading == null) {
+                targetAzimuthValueLabel.setText("---");
+            } else {
+                targetAzimuthValueLabel.setText(degreesHtml(targetHeading));
+            }
+        }
+
+        private static String degreesHtml(int degrees) {
+            return "<html>" + degrees + "<sup style='font-size:55%'>&deg;</sup></html>";
         }
 
         private static void validateAzimuth(int target) {
@@ -660,7 +823,7 @@ public class ArcoRotorDesktopApplication {
 
         private void updateHeading(int heading) {
             currentHeading = heading;
-            headingLabel.setText(Integer.toString(heading));
+            headingLabel.setText(degreesHtml(heading));
             compassPanel.setHeading(heading);
         }
 
@@ -696,7 +859,7 @@ public class ArcoRotorDesktopApplication {
 
         private void setConnectionControls(boolean enabled) {
             hostCombo.setEnabled(enabled);
-            portSpinner.setEnabled(enabled);
+            portField.setEnabled(enabled);
             scanButton.setVisible(enabled);
             scanButton.setEnabled(enabled && !scanning);
         }
@@ -708,12 +871,31 @@ public class ArcoRotorDesktopApplication {
             return item == null ? "" : item.toString().trim();
         }
 
+        private int selectedPort() {
+            String rawPort = portField.getText() == null ? "" : portField.getText().trim();
+            try {
+                int port = Integer.parseInt(rawPort);
+                if (port < 1 || port > 65535) {
+                    throw new NumberFormatException("out of range");
+                }
+                return port;
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException(t("status.invalidTcpPort"));
+            }
+        }
+
         private void scanNetworkForArco() {
             if (connected || scanning) {
                 return;
             }
 
-            int port = (Integer) portSpinner.getValue();
+            int port;
+            try {
+                port = selectedPort();
+            } catch (IllegalArgumentException exception) {
+                showError(exception.getMessage());
+                return;
+            }
             List<String> addressesToScan;
             try {
                 addressesToScan = localIpv4Candidates();
@@ -977,6 +1159,15 @@ public class ArcoRotorDesktopApplication {
             Preset currentPreset = presetButton.preset();
             JTextField labelField = new JTextField(currentPreset.label(), 12);
             JSpinner azimuthSpinner = new JSpinner(new SpinnerNumberModel(currentPreset.azimuth(), 0, MAX_TARGET_AZIMUTH, 1));
+            JLabel labelCaption = createFormLabel(t("label.presetLabel"));
+            JLabel azimuthCaption = createFormLabel(t("label.azimuth"));
+            labelField.setFont(labelField.getFont().deriveFont(UI_FONT_SIZE));
+            azimuthSpinner.setFont(azimuthSpinner.getFont().deriveFont(UI_FONT_SIZE));
+            JComponent azimuthEditor = azimuthSpinner.getEditor();
+            azimuthEditor.setFont(azimuthEditor.getFont().deriveFont(UI_FONT_SIZE));
+            if (azimuthEditor instanceof JSpinner.DefaultEditor defaultEditor) {
+                defaultEditor.getTextField().setFont(defaultEditor.getTextField().getFont().deriveFont(UI_FONT_SIZE));
+            }
 
             JPanel panel = new JPanel(new GridBagLayout());
             GridBagConstraints constraints = new GridBagConstraints();
@@ -985,7 +1176,7 @@ public class ArcoRotorDesktopApplication {
 
             constraints.gridx = 0;
             constraints.gridy = 0;
-            panel.add(new JLabel(t("label.presetLabel")), constraints);
+            panel.add(labelCaption, constraints);
 
             constraints.gridx = 1;
             constraints.fill = GridBagConstraints.HORIZONTAL;
@@ -996,7 +1187,7 @@ public class ArcoRotorDesktopApplication {
             constraints.gridy = 1;
             constraints.fill = GridBagConstraints.NONE;
             constraints.weightx = 0;
-            panel.add(new JLabel(t("label.azimuth")), constraints);
+            panel.add(azimuthCaption, constraints);
 
             constraints.gridx = 1;
             panel.add(azimuthSpinner, constraints);
@@ -1043,7 +1234,7 @@ public class ArcoRotorDesktopApplication {
                 this.index = index;
                 this.preset = preset;
                 this.button = new JButton();
-                this.button.setPreferredSize(new Dimension(120, 58));
+                this.button.setPreferredSize(new Dimension(150, 58));
                 this.button.setFocusPainted(false);
                 this.button.setOpaque(true);
                 this.button.setBorderPainted(true);
@@ -1112,7 +1303,8 @@ public class ArcoRotorDesktopApplication {
 
             private void refreshText() {
                 button.setToolTipText(t("tooltip.preset"));
-                button.setText("<html><center>" + escapeHtml(preset.label()) + "<br><b>" + preset.azimuth() + " " + t("degree") + "</b></center></html>");
+                button.setFont(button.getFont().deriveFont(Font.BOLD, BUTTON_FONT_SIZE));
+                button.setText("<html><center>" + escapeHtml(preset.label()) + "<br><b>" + preset.azimuth() + "<sup style='font-size:55%'>&deg;</sup></b></center></html>");
             }
 
             private void startLongPressTimer() {
@@ -1277,7 +1469,10 @@ public class ArcoRotorDesktopApplication {
 
         private int heading = -1;
         private Integer targetHeading;
-        private String degreeSuffix = "deg";
+        private String northLabel = "N";
+        private String eastLabel = "E";
+        private String southLabel = "S";
+        private String westLabel = "W";
 
         private final IntConsumer azimuthClickHandler;
 
@@ -1305,8 +1500,11 @@ public class ArcoRotorDesktopApplication {
             repaint();
         }
 
-        void setDegreeSuffix(String degreeSuffix) {
-            this.degreeSuffix = degreeSuffix;
+        void setCardinalLabels(String northLabel, String eastLabel, String southLabel, String westLabel) {
+            this.northLabel = northLabel;
+            this.eastLabel = eastLabel;
+            this.southLabel = southLabel;
+            this.westLabel = westLabel;
             repaint();
         }
 
@@ -1355,6 +1553,7 @@ public class ArcoRotorDesktopApplication {
 
                 drawTicks(g, centerX, centerY, radius);
                 drawLabels(g, centerX, centerY, radius);
+                drawDegreeLabels(g, centerX, centerY, radius);
 
                 if (targetHeading != null) {
                     drawTargetLine(g, centerX, centerY, radius, targetHeading);
@@ -1362,9 +1561,9 @@ public class ArcoRotorDesktopApplication {
 
                 if (heading >= 0) {
                     drawNeedle(g, centerX, centerY, radius, heading);
-                    drawHeadingText(g, centerX, centerY, heading);
                 } else {
-                    drawHeadingText(g, centerX, centerY, 0);
+                    g.setColor(TEXT_PRIMARY);
+                    g.fillOval(centerX - 7, centerY - 7, 14, 14);
                 }
             } finally {
                 g.dispose();
@@ -1385,13 +1584,24 @@ public class ArcoRotorDesktopApplication {
             }
         }
 
-        private static void drawLabels(Graphics2D g, int centerX, int centerY, int radius) {
+        private void drawLabels(Graphics2D g, int centerX, int centerY, int radius) {
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
             g.setColor(TEXT_PRIMARY);
-            drawCenteredString(g, "N", centerX, centerY - radius + 48);
-            drawCenteredString(g, "E", centerX + radius - 48, centerY);
-            drawCenteredString(g, "S", centerX, centerY + radius - 42);
-            drawCenteredString(g, "W", centerX - radius + 48, centerY);
+            drawCenteredString(g, northLabel, centerX, centerY - radius + 48);
+            drawCenteredString(g, eastLabel, centerX + radius - 48, centerY);
+            drawCenteredString(g, southLabel, centerX, centerY + radius - 42);
+            drawCenteredString(g, westLabel, centerX - radius + 48, centerY);
+        }
+
+        private static void drawDegreeLabels(Graphics2D g, int centerX, int centerY, int radius) {
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+            g.setColor(TEXT_SECONDARY);
+            for (int degrees = 0; degrees < 360; degrees += 30) {
+                double radians = Math.toRadians(degrees);
+                int labelX = centerX + (int) Math.round(Math.sin(radians) * (radius - 70));
+                int labelY = centerY - (int) Math.round(Math.cos(radians) * (radius - 70));
+                drawCenteredString(g, Integer.toString(degrees), labelX, labelY);
+            }
         }
 
         private static void drawNeedle(Graphics2D g, int centerX, int centerY, int radius, int heading) {
@@ -1423,12 +1633,6 @@ public class ArcoRotorDesktopApplication {
             g.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g.setColor(TARGET_BLUE);
             g.drawLine(centerX, centerY, targetX, targetY);
-        }
-
-        private void drawHeadingText(Graphics2D g, int centerX, int centerY, int heading) {
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 34));
-            g.setColor(TEXT_PRIMARY);
-            drawCenteredString(g, heading + " " + degreeSuffix, centerX, centerY + 60);
         }
 
         private static void drawCenteredString(Graphics2D g, String text, int x, int y) {

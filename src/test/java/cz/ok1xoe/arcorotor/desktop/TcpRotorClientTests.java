@@ -129,6 +129,22 @@ class TcpRotorClientTests {
         assertCommandSent(client -> client.stop(), "S");
     }
 
+    @Test
+    void sendsRotationSpeedCommandsOverTcp() throws Exception {
+        assertCommandSent(client -> client.setRotationSpeed(1), "X1");
+        assertCommandSent(client -> client.setRotationSpeed(4), "X4");
+    }
+
+    @Test
+    void rejectsRotationSpeedOutsideSupportedRange() {
+        TcpRotorClient client = new TcpRotorClient("127.0.0.1", 4001);
+
+        assertThatThrownBy(() -> client.setRotationSpeed(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> client.setRotationSpeed(5))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private static void assertCommandSent(ClientAction action, String expectedCommand) throws Exception {
         try (ServerSocket serverSocket = new ServerSocket(0)) {
             CompletableFuture<String> command = CompletableFuture.supplyAsync(() -> {

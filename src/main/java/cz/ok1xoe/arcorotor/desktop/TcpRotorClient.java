@@ -68,6 +68,13 @@ public class TcpRotorClient {
         sendCommand("S", false);
     }
 
+    public void setRotationSpeed(int speed) {
+        if (speed < 1 || speed > 4) {
+            throw new IllegalArgumentException("Rotation speed must be between 1 and 4.");
+        }
+        sendCommand("X" + speed, false);
+    }
+
     public static boolean isArcoReachable(String host, int port) {
         return isArcoReachable(host, port, null);
     }
