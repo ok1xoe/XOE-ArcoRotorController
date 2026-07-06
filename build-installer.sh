@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 
 APP_NAME="Arco Rotor Controller"
-APP_VERSION="1.0.1"
+APP_VERSION="1.0.2"
 MAIN_JAR="XOE-ArcoRotorController-${APP_VERSION}.jar"
 MAIN_CLASS="cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication"
 DEST_DIR="target/installer"
@@ -27,7 +27,10 @@ case "$TYPE" in
     ICON="src/main/resources/icons/windows/xoe-arc-compass.ico"
     ;;
   *)
-    ICON="src/main/resources/icons/png/xoe-arc-compass-512x512.png"
+    case "$(uname -s)" in
+      Darwin) ICON="src/main/resources/icons/macos/xoe-arc-compass.icns" ;;
+      *) ICON="src/main/resources/icons/png/xoe-arc-compass-512x512.png" ;;
+    esac
     ;;
 esac
 
