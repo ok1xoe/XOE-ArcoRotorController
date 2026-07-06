@@ -52,13 +52,13 @@ These scripts build the runnable JAR and then start the app.
 Output JAR:
 
 ```text
-target/XOE-ArcoRotorController-1.0.2.jar
+target/XOE-ArcoRotorController-1.0.3.jar
 ```
 
 Run manually:
 
 ```bash
-java -jar target/XOE-ArcoRotorController-1.0.2.jar
+java -jar target/XOE-ArcoRotorController-1.0.3.jar
 ```
 
 ## Build Native Installers
