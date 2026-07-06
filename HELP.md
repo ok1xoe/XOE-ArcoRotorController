@@ -45,13 +45,13 @@ Build the runnable JAR:
 The generated application file is:
 
 ```text
-target/XOE-ArcoRotorController-1.0.0.jar
+target/XOE-ArcoRotorController-1.0.1.jar
 ```
 
 You can run it directly:
 
 ```bash
-java -jar target/XOE-ArcoRotorController-1.0.0.jar
+java -jar target/XOE-ArcoRotorController-1.0.1.jar
 ```
 
 ## Build Installer Package

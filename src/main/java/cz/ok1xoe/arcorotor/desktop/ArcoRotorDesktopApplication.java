@@ -5,6 +5,9 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -101,8 +104,9 @@ public class ArcoRotorDesktopApplication {
         private final JLabel languageLabel = createFormLabel("");
         private final JLabel captionLabel = new JLabel("", SwingConstants.CENTER);
         private final JLabel hintLabel = new JLabel("");
-        private final JLabel communicationLogLabel = createFormLabel("");
         private final JTextArea communicationLogArea = new JTextArea(5, 80);
+        private final JMenu windowsMenu = new JMenu();
+        private final JMenuItem tcpCommunicationMenuItem = new JMenuItem();
         private final JLabel headingLabel = new JLabel("---", SwingConstants.CENTER);
         private final JTextField headingEditField = new JTextField(4);
         private final JPanel headingCards = new JPanel(new CardLayout());
@@ -125,13 +129,16 @@ public class ArcoRotorDesktopApplication {
         private boolean refreshHeadingAfterRelativeError;
         private volatile boolean scanning;
         private ExecutorService scanExecutor;
+        private final CommunicationLogWindow communicationLogWindow;
 
         ArcoRotorFrame() {
             super();
             this.i18n = new I18n(Language.fromCode(windowPreferences.get("language", Language.EN.code())));
+            this.communicationLogWindow = new CommunicationLogWindow();
             setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             setMinimumSize(new Dimension(900, 660));
             setLocationByPlatform(true);
+            setJMenuBar(createApplicationMenuBar());
 
             JPanel root = new JPanel(new BorderLayout(18, 18));
             root.setBorder(BorderFactory.createEmptyBorder(18, 20, 18, 20));
@@ -161,10 +168,19 @@ public class ArcoRotorDesktopApplication {
                 public void windowClosed(WindowEvent event) {
                     stopScanExecutor();
                     disconnect();
+                    communicationLogWindow.dispose();
                 }
             });
 
             pack();
+        }
+
+        private JMenuBar createApplicationMenuBar() {
+            JMenuBar menuBar = new JMenuBar();
+            tcpCommunicationMenuItem.addActionListener(event -> showCommunicationLogWindow());
+            windowsMenu.add(tcpCommunicationMenuItem);
+            menuBar.add(windowsMenu);
+            return menuBar;
         }
 
         private JPanel createTopPanel() {
@@ -288,10 +304,12 @@ public class ArcoRotorDesktopApplication {
 
         private void updateTexts() {
             setTitle(t("app.title"));
+            windowsMenu.setText(t("menu.windows"));
+            tcpCommunicationMenuItem.setText(t("menu.tcpCommunication"));
             ipLabel.setText(t("label.ip"));
             tcpPortLabel.setText(t("label.tcpPort"));
             languageLabel.setText(t("label.language"));
-            communicationLogLabel.setText(t("label.communication"));
+            communicationLogWindow.updateTexts();
             scanButton.setText(t("button.scan"));
             connectButton.setText(connected ? t("button.disconnect") : t("button.connect"));
             ccwButton.setText(t("button.ccw"));
@@ -399,30 +417,17 @@ public class ArcoRotorDesktopApplication {
 
             panel.add(hintLabel, BorderLayout.NORTH);
             panel.add(createPresetPanel(), BorderLayout.CENTER);
-            panel.add(createCommunicationLogPanel(), BorderLayout.SOUTH);
 
             return panel;
         }
 
-        private JPanel createCommunicationLogPanel() {
-            JPanel panel = new JPanel(new BorderLayout(0, 5));
-            panel.setOpaque(false);
-
-            communicationLogArea.setEditable(false);
-            communicationLogArea.setLineWrap(false);
-            communicationLogArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-            communicationLogArea.setForeground(TEXT_PRIMARY);
-            communicationLogArea.setBackground(PANEL_BACKGROUND);
-            communicationLogArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-
-            JScrollPane scrollPane = new JScrollPane(communicationLogArea);
-            scrollPane.setPreferredSize(new Dimension(820, 112));
-            scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-            scrollPane.getViewport().setBackground(PANEL_BACKGROUND);
-
-            panel.add(communicationLogLabel, BorderLayout.NORTH);
-            panel.add(scrollPane, BorderLayout.CENTER);
-            return panel;
+        private void showCommunicationLogWindow() {
+            if (!communicationLogWindow.isVisible()) {
+                communicationLogWindow.setLocationRelativeTo(this);
+            }
+            communicationLogWindow.setVisible(true);
+            communicationLogWindow.toFront();
+            communicationLogWindow.requestFocus();
         }
 
         private JPanel createPresetPanel() {
@@ -881,6 +886,42 @@ public class ArcoRotorDesktopApplication {
             }
             communicationLogArea.setText(String.join(System.lineSeparator(), communicationLogEntries));
             communicationLogArea.setCaretPosition(communicationLogArea.getDocument().getLength());
+        }
+
+        private final class CommunicationLogWindow extends JFrame {
+
+            private final JLabel logLabel = createFormLabel("");
+
+            private CommunicationLogWindow() {
+                setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+                setMinimumSize(new Dimension(760, 320));
+
+                JPanel root = new JPanel(new BorderLayout(0, 8));
+                root.setBorder(BorderFactory.createEmptyBorder(14, 16, 16, 16));
+                root.setBackground(APP_BACKGROUND);
+                setContentPane(root);
+
+                communicationLogArea.setEditable(false);
+                communicationLogArea.setLineWrap(false);
+                communicationLogArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+                communicationLogArea.setForeground(TEXT_PRIMARY);
+                communicationLogArea.setBackground(PANEL_BACKGROUND);
+                communicationLogArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+
+                JScrollPane scrollPane = new JScrollPane(communicationLogArea);
+                scrollPane.setPreferredSize(new Dimension(820, 260));
+                scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+                scrollPane.getViewport().setBackground(PANEL_BACKGROUND);
+
+                root.add(logLabel, BorderLayout.NORTH);
+                root.add(scrollPane, BorderLayout.CENTER);
+                pack();
+            }
+
+            private void updateTexts() {
+                setTitle(t("window.tcpCommunicationTitle"));
+                logLabel.setText(t("label.communication"));
+            }
         }
 
         private void showError(String message) {
