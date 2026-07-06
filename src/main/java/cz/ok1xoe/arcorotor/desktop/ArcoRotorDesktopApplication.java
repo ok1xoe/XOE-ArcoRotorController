@@ -558,7 +558,7 @@ public class ArcoRotorDesktopApplication {
                 String host = selectedHost();
                 client = new TcpRotorClient(host, selectedPort(), this::recordCommunication);
                 windowPreferences.put("host", host);
-                executor = Executors.newSingleThreadScheduledExecutor();
+                executor = Executors.newScheduledThreadPool(2);
                 connected = true;
                 setConnectionControls(false);
                 connectButton.setText(t("button.disconnect"));
@@ -666,6 +666,7 @@ public class ArcoRotorDesktopApplication {
             clearStatus();
             executor.execute(() -> {
                 try {
+                    client.setRotationSpeed(speedSlider.getValue());
                     client.moveToAzimuth(target);
                     SwingUtilities.invokeLater(this::clearStatus);
                     executor.schedule(this::pollHeading, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
@@ -688,6 +689,7 @@ public class ArcoRotorDesktopApplication {
             clearStatus();
             executor.execute(() -> {
                 try {
+                    client.setRotationSpeed(speedSlider.getValue());
                     if (clockwise) {
                         client.rotateClockwise();
                     } else {
