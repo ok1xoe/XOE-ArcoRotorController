@@ -35,7 +35,10 @@ jobs:
         include:
           - os: ubuntu-latest
             package_type: deb
-            artifact_name: linux-package
+            artifact_name: linux-deb-package
+          - os: ubuntu-latest
+            package_type: rpm
+            artifact_name: linux-rpm-package
           - os: windows-latest
             package_type: msi
             artifact_name: windows-package
@@ -62,7 +65,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot
+          sudo apt-get install -y fakeroot rpm
           chmod +x mvnw build-installer.sh
           ./build-installer.sh "${{ matrix.package_type }}"
         shell: bash
