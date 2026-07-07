@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 
 APP_NAME="Arco Rotor Controller"
-APP_VERSION="1.0.3"
+APP_VERSION="1.1.0"
 MAIN_JAR="XOE-ArcoRotorController-${APP_VERSION}.jar"
 MAIN_CLASS="cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication"
 DEST_DIR="target/installer"

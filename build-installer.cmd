@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 set APP_NAME=Arco Rotor Controller
-set APP_VERSION=1.0.3
+set APP_VERSION=1.1.0
 set MAIN_JAR=XOE-ArcoRotorController-%APP_VERSION%.jar
 set MAIN_CLASS=cz.ok1xoe.arcorotor.desktop.ArcoRotorDesktopApplication
 set DEST_DIR=target\installer

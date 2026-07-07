@@ -2,26 +2,33 @@
 
 Cross-platform desktop application for controlling a microHAM ARCO rotator controller over LAN/TCP.
 
-The app communicates directly with ARCO via TCP socket using the Yaesu GS-232 control protocol.
-No REST API, USB serial bridge, or background server is required.
+The app communicates directly with ARCO through a TCP socket using the Yaesu GS-232 control protocol. It does not require a REST API, USB serial bridge, or background server.
 
 ## Features
 
-- Live azimuth readout (polling every 150 ms)
-- Click-to-rotate compass control with degree labels and localized cardinal directions
-- Manual absolute azimuth input (`0-360`)
-- Relative input support (`+10`, `-45`)
-- Editable preset buttons for frequently used azimuths
-- Input validation with clear error handling
-- Cross-platform build and installer workflow (macOS, Windows, Linux)
+- Live azimuth readout, polled every 150 ms
+- Click-to-rotate compass with degree labels and localized cardinal directions
+- Absolute azimuth entry from `0` to `360`
+- Relative azimuth entry such as `+10` or `-45`
+- Manual `CCW`, `CW`, and `STOP` controls
+- Rotation speed control from `1` to `4`
+- Ten editable azimuth presets
+- TCP communication log window
+- Local network scan for ARCO on the configured TCP port
+- Offline azimuth map generated from a Maidenhead locator
+- Physical and political offline map styles
+- Configurable map range in kilometers
+- Optional live grayline overlay that updates with time
+- English and Czech UI
+- Native installer workflow for macOS, Windows, and Linux
 
 ## Requirements
 
 - Java 26+
-- ARCO and your computer must be on the same network
+- ARCO and the computer must be on the same local network
 - ARCO LAN `CONTROL PROTOCOL` enabled
 - ARCO `Control Protocol` set to `Yaesu GS-232`
-- Known ARCO endpoint (`IP:PORT`), e.g.:
+- Known ARCO endpoint (`IP:PORT`), for example:
 
 ```text
 192.168.15.131:4001
@@ -29,19 +36,19 @@ No REST API, USB serial bridge, or background server is required.
 
 ## Quick Start
 
-### macOS / Linux
+macOS / Linux:
 
 ```bash
 ./run-desktop.sh
 ```
 
-### Windows
+Windows:
 
 ```bat
 run-desktop.cmd
 ```
 
-These scripts build the runnable JAR and then start the app.
+The scripts build the runnable JAR and then start the app.
 
 ## Build
 
@@ -52,13 +59,13 @@ These scripts build the runnable JAR and then start the app.
 Output JAR:
 
 ```text
-target/XOE-ArcoRotorController-1.0.3.jar
+target/XOE-ArcoRotorController-1.1.0.jar
 ```
 
 Run manually:
 
 ```bash
-java -jar target/XOE-ArcoRotorController-1.0.3.jar
+java -jar target/XOE-ArcoRotorController-1.1.0.jar
 ```
 
 ## Build Native Installers
@@ -69,29 +76,25 @@ java -jar target/XOE-ArcoRotorController-1.0.3.jar
 - Windows -> `msi` / `exe`
 - Linux -> `deb` / `rpm` (depends on installed tooling)
 
-### macOS
-
-Default (`dmg`):
+macOS default (`dmg`):
 
 ```bash
 ./build-installer.sh
 ```
 
-Explicit format (example `pkg`):
+macOS explicit format:
 
 ```bash
 ./build-installer.sh pkg
 ```
 
-### Windows
-
-Default (`msi`):
+Windows default (`msi`):
 
 ```bat
 build-installer.cmd
 ```
 
-Explicit format (example `exe`):
+Windows explicit format:
 
 ```bat
 build-installer.cmd exe
@@ -105,74 +108,98 @@ target/installer
 
 ## First Connection
 
-1. Enter ARCO IP into `IP address`.
-2. Enter ARCO TCP port into `TCP port`.
-3. Click `Connect`.
-4. Verify the large azimuth display starts updating.
+Connection details are configured in `Settings > Connection and map`.
 
-## Controls
+1. Open `Settings > Connection and map`.
+2. Enter the ARCO IP address.
+3. Enter the ARCO TCP control port.
+4. Optionally click `Scan network` to search the local IPv4 network for ARCO.
+5. Close the settings dialog.
+6. Click `Connect`.
+
+The large azimuth display should start updating after a successful connection.
+
+## Main Controls
 
 ### Current Azimuth
 
-- Displays current heading reported by ARCO.
-- Enter a target azimuth directly in the large azimuth field and press `Enter` to send.
+The large number shows the current azimuth reported by ARCO.
 
-### Target Azimuth
+Double-click the large azimuth value to edit it. Enter an absolute azimuth and press `Enter` to send a move command.
 
-- Shows the last sent target azimuth.
+Allowed absolute range:
 
-### Manual Rotation
-
-- Press and hold `CCW` / `CW` for manual rotation.
-- Releasing the button sends `S` stop.
-- `STOP` sends an immediate stop command.
-- `Speed` sends GS-232 `X1` to `X4` speed commands and is remembered between starts.
-
-### Absolute Input
-
-- Allowed range: `0-360`
-- Values above `360` are rejected.
+```text
+0-360
+```
 
 ### Relative Input
 
-Supports:
+The azimuth editor also accepts relative values:
 
 ```text
 +10
 -45
 ```
 
-Example:
-
-```text
-Current azimuth: 100
-Input: +10
-Sent target: 110
-```
-
-Relative values do **not** wrap around.
-If result is outside `0-360`, command is not sent and an error is shown.
+Relative values do not wrap around. If the result would be outside `0-360`, no command is sent and an error is shown.
 
 ### Compass
 
-- Click inside the compass to send target azimuth.
-- The compass shows degree labels every `30°` and localized cardinal directions.
+- Click inside the compass to send a target azimuth.
+- Red line shows current azimuth.
+- Blue line shows target azimuth.
+- Numeric degree labels are on the outer label ring.
+- Cardinal directions are on the inner label ring.
+- Cardinal directions are localized (`N/E/S/W` in English, `S/V/J/Z` in Czech).
+
+### Manual Rotation
+
+- Press and hold `CCW` or `CW` for manual rotation.
+- Releasing the button sends the `S` stop command.
+- Moving the mouse out of a held button also sends stop.
+- `STOP` sends an immediate stop command.
+- `Speed` sends GS-232 `X1` to `X4` speed commands and is remembered between starts.
 
 ### Presets
 
-- Presets are shown at the bottom in two rows of five buttons.
-- Click a preset to send its stored azimuth.
+- Ten presets are shown at the bottom in two rows of five buttons.
+- Left-click a preset to send its stored azimuth.
 - Right-click a preset to edit its label and azimuth.
 - Hold a preset for 3 seconds to store the currently reported azimuth.
+- Preset labels can have at most 10 characters.
 
-## Project Structure (important files)
+## Map And Grayline
 
-- `src/main/java/.../ArcoRotorDesktopApplication.java` – application entry point
-- `src/main/java/.../TcpRotorClient.java` – TCP communication with ARCO
-- `run-desktop.sh`, `run-desktop.cmd` – quick run scripts
-- `build-installer.sh`, `build-installer.cmd` – native installer scripts
-- `src/main/resources/icons/` – platform icon assets
-- `HELP.md` – extended user help
+Map settings are in `Settings > Connection and map`.
+
+- `Map`: choose `Physical` or `Political`.
+- `Range km`: sets the map radius in kilometers from the Maidenhead locator.
+- `Locator`: enter a Maidenhead locator such as `JO70`, `JO70FD`, or `JN88`.
+- `Generate map`: creates the compass map for the selected locator and map settings.
+- `Clear map`: removes the map overlay.
+- `Show grayline`: toggles the live day/night overlay.
+
+All map data is bundled in the application. Internet access is not needed at runtime.
+
+Bundled map sources:
+
+- Physical map: Natural Earth II 50m raster, rendered as `8192 x 4096` JPEG
+- Political map: Natural Earth 50m Admin 0 countries, rendered as `8192 x 4096` PNG
+
+Natural Earth data is public domain. See `src/main/resources/maps/README.md`.
+
+## Project Structure
+
+- `src/main/java/.../ArcoRotorDesktopApplication.java` - desktop UI, compass, map, grayline
+- `src/main/java/.../TcpRotorClient.java` - TCP communication with ARCO
+- `src/main/resources/maps/` - bundled offline map assets
+- `src/main/resources/icons/` - platform icon assets
+- `src/main/resources/cz/ok1xoe/arcorotor/desktop/messages_*.properties` - UI translations
+- `src/test/java/...` - unit tests
+- `run-desktop.sh`, `run-desktop.cmd` - quick run scripts
+- `build-installer.sh`, `build-installer.cmd` - native installer scripts
+- `HELP.md` - detailed user help
 
 ## License
 

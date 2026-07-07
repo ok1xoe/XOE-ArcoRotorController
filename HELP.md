@@ -1,18 +1,18 @@
-# XOE ArcoRotorController
+# XOE ArcoRotorController Help
 
-XOE ArcoRotorController is a cross-platform desktop application for controlling a microHAM ARCO rotator controller over LAN/TCP.
+XOE ArcoRotorController is a cross-platform desktop controller for microHAM ARCO over LAN/TCP.
 
-The application communicates directly with ARCO through a TCP socket using the Yaesu GS-232 control protocol. It does not use a REST API, USB serial control, or a background server.
+The application talks directly to ARCO using a TCP socket and Yaesu GS-232 commands. No web server, REST API, USB serial adapter, or internet connection is required for normal operation.
 
 ## Requirements
 
 - Java 26 or newer
-- ARCO and the computer must be connected to the same network
-- ARCO LAN `CONTROL PROTOCOL` must be enabled
-- ARCO `Control Protocol` must be set to `Yaesu GS-232`
-- You must know the ARCO IP address and TCP control port
+- ARCO and the computer on the same local network
+- ARCO LAN `CONTROL PROTOCOL` enabled
+- ARCO `Control Protocol` set to `Yaesu GS-232`
+- ARCO IP address and TCP control port
 
-Example ARCO TCP control endpoint:
+Example endpoint:
 
 ```text
 192.168.15.131:4001
@@ -32,75 +32,107 @@ Windows:
 run-desktop.cmd
 ```
 
-The startup scripts build the runnable JAR and then start it with `java -jar`. You do not need to start any server.
+The startup scripts build the runnable JAR and then run it with `java -jar`.
 
 ## Build The Application
-
-Build the runnable JAR:
 
 ```bash
 ./mvnw package
 ```
 
-The generated application file is:
+Generated JAR:
 
 ```text
-target/XOE-ArcoRotorController-1.0.3.jar
+target/XOE-ArcoRotorController-1.1.0.jar
 ```
 
-You can run it directly:
+Manual run:
 
 ```bash
-java -jar target/XOE-ArcoRotorController-1.0.3.jar
+java -jar target/XOE-ArcoRotorController-1.1.0.jar
 ```
 
 ## Build Installer Package
 
-`jpackage` creates native installers, but only for the OS where you run it.
+`jpackage` creates native installers only for the OS where it is run.
 
-- macOS: run on macOS (`dmg` or `pkg`)
-- Windows: run on Windows (`msi` or `exe`)
-- Linux: run on Linux (`deb` or `rpm`, depending on available tooling)
+- macOS: `dmg` or `pkg`
+- Windows: `msi` or `exe`
+- Linux: `deb`, `rpm`, or app image depending on available tooling
 
-macOS (default `dmg`):
+macOS default:
 
 ```bash
 ./build-installer.sh
 ```
 
-macOS (explicit format, for example `pkg`):
+macOS explicit format:
 
 ```bash
 ./build-installer.sh pkg
 ```
 
-Windows (default `msi`):
+Windows default:
 
 ```bat
 build-installer.cmd
 ```
 
-Windows (explicit format, for example `exe`):
+Windows explicit format:
 
 ```bat
 build-installer.cmd exe
 ```
 
-Installer output directory:
+Installer output:
 
 ```text
 target/installer
 ```
 
+## Settings
+
+Open `Settings > Connection and map`.
+
+This dialog contains connection, language, map, and grayline settings.
+
+### Connection
+
+- `IP address`: ARCO IPv4 address.
+- `TCP port`: ARCO TCP control port, usually `4001`.
+- `Scan network`: scans local IPv4 networks for reachable ARCO devices on the selected port.
+
+The scan checks local subnet candidates only. It does not use the internet.
+
+### Language
+
+- `EN`
+- `CZ`
+
+The selected language is stored locally using Java Preferences.
+
+### Map
+
+- `Map`: `Physical` or `Political`.
+- `Range km`: map radius from the selected Maidenhead locator.
+- `Locator`: Maidenhead locator used as the map center, for example `JO70`, `JO70FD`, or `JN88`.
+- `Generate map`: creates a new azimuth map for the selected locator.
+- `Clear map`: removes the map overlay.
+- `Show grayline`: enables or disables the live day/night overlay.
+
+Map settings are stored locally using Java Preferences.
+
 ## First Connection
 
-1. Enter the ARCO IP address in the `IP address` field.
-2. Enter the ARCO TCP control port in the `TCP port` field.
-3. Click `Connect`.
-4. The large azimuth display should start showing the current heading.
+1. Open `Settings > Connection and map`.
+2. Enter ARCO IP address and TCP port.
+3. Optionally use `Scan network`.
+4. Close the settings dialog.
+5. Click `Connect`.
 
-The current azimuth is polled every 150 ms.
-Connection state is indicated by the `Connect` / `Disconnect` button and status messages.
+After connection, the large azimuth readout should update every 150 ms.
+
+The main window intentionally keeps only the primary `Connect` / `Disconnect` action visible. Detailed connection and map settings are in the settings dialog.
 
 ## Main Controls
 
@@ -108,19 +140,19 @@ Connection state is indicated by the `Connect` / `Disconnect` button and status 
 
 The large number shows the current azimuth reported by ARCO.
 
-Enter a target azimuth directly in the large azimuth field and press `Enter` to send it.
+Double-click the large number to enter a target azimuth manually. Press `Enter` to send it.
 
-Allowed absolute target range:
+Allowed absolute range:
 
 ```text
 0-360
 ```
 
-Values above `360` are rejected and no command is sent.
+Values outside the range are rejected and no command is sent.
 
 ### Relative Azimuth Entry
 
-Manual entry also supports relative values:
+The manual azimuth field also accepts relative input:
 
 ```text
 +10
@@ -141,7 +173,7 @@ Input: -45
 Sent target: 55
 ```
 
-Relative input does not wrap around. If the result would go below `0` or above `360`, the application shows an error and sends no command.
+Relative input does not wrap around. If the result would go below `0` or above `360`, the app shows an error and sends no command.
 
 Example:
 
@@ -155,12 +187,45 @@ Result: error, command not sent
 
 Click inside the compass to send a target azimuth.
 
-- Red line: current azimuth
-- Blue line: target azimuth
-- Degree labels are shown every `30°`.
-- Cardinal directions are localized (`N`, `E`, `S`, `W` in English; `S`, `V`, `J`, `Z` in Czech).
+- Red line: current azimuth.
+- Blue line: target azimuth.
+- Numeric degree labels: outer label ring.
+- Cardinal directions: inner label ring.
+- English cardinal directions: `N`, `E`, `S`, `W`.
+- Czech cardinal directions: `S`, `V`, `J`, `Z`.
 
-The `Target Azimuth` panel shows the last target azimuth sent from the large azimuth field, compass, or preset.
+The `Target Azimuth` panel shows the last target azimuth sent from the manual field, compass, or preset.
+
+### Azimuth Map
+
+When a map is generated from a locator, it is drawn inside the compass.
+
+The map is azimuthal around the selected Maidenhead locator:
+
+- the center is the selected locator
+- directions match compass azimuths
+- the outer map edge represents the selected `Range km`
+
+Example:
+
+```text
+Locator: JN88
+Range km: 2000
+```
+
+The map edge is approximately 2000 km from the center locator.
+
+### Grayline
+
+The grayline overlay shows approximate day and night regions.
+
+- Daylight areas remain unchanged.
+- Night areas are slightly darkened.
+- The transition is smooth around the terminator.
+- The overlay updates automatically once per minute.
+- It can be enabled or disabled with `Show grayline`.
+
+The grayline is calculated locally from the current system time. It does not need internet access.
 
 ### Manual Rotation
 
@@ -171,37 +236,37 @@ Use `CCW` and `CW` for manual rotation.
 - Releasing the button sends the `S` stop command.
 - Moving the mouse out of the button while holding it also sends stop.
 - Click `STOP` to send an immediate stop command.
-- Set `Speed` from `1` to `4` to change ARCO rotation speed (`1` slowest, `4` fastest).
+- Set `Speed` from `1` to `4` to change ARCO rotation speed.
 - The selected speed is stored locally and sent to ARCO after connecting.
 
 ### Presets
 
-There are 10 editable preset buttons shown at the bottom of the main window in two rows of five buttons.
+There are 10 editable preset buttons at the bottom of the main window.
 
 - Left-click a preset to send its stored azimuth.
 - Right-click a preset to edit its label and azimuth.
-- Hold a preset for 3 seconds to store the currently reported azimuth in that preset.
+- Hold a preset for 3 seconds to store the currently reported azimuth.
 
-Preset label limit:
+Preset labels can have at most 10 characters.
 
-```text
-10 characters
-```
+Preset values are stored locally using Java Preferences.
 
-Preset values are stored locally using Java Preferences, so they persist after the application is restarted.
+## TCP Communication Log
 
-## Language
+Open `Windows > TCP communication`.
 
-The application supports:
+The log shows recent TCP commands and responses, including:
 
-- EN
-- CZ
+- endpoint (`host:port`)
+- command sent
+- response or error
+- timestamp
 
-The default language is EN. The selected language is stored locally using Java Preferences.
+This is useful for troubleshooting ARCO communication.
 
 ## Protocol Commands
 
-XOE ArcoRotorController uses these GS-232-compatible commands:
+The application uses GS-232-compatible commands:
 
 ```text
 C       read current azimuth
@@ -212,7 +277,22 @@ S       stop
 X1-X4   set rotation speed
 ```
 
-Commands are sent to ARCO over TCP and terminated with carriage return (`\r`).
+Commands are sent over TCP and terminated with carriage return (`\r`).
+
+## Offline Map Assets
+
+All map data is bundled in the application.
+
+Current bundled maps:
+
+- `natural-earth-8192.jpg` - saturated Natural Earth II 50m physical raster, `8192 x 4096`
+- `natural-earth-countries-8192.png` - Natural Earth 50m Admin 0 countries political map, `8192 x 4096`
+
+Natural Earth data is public domain. See:
+
+```text
+src/main/resources/maps/README.md
+```
 
 ## Error Handling
 
@@ -231,14 +311,14 @@ After a relative input overflow, the next user action refreshes the current azim
 If the azimuth does not update:
 
 - Check that ARCO is powered on.
-- Check that ARCO and the computer are connected to the same network.
-- Check that ARCO is reachable on the network.
-- Verify the IP address and TCP port.
+- Check that ARCO and the computer are on the same local network.
+- Check ARCO IP address and TCP port in `Settings > Connection and map`.
+- Try `Scan network`.
 - Verify that ARCO LAN `CONTROL PROTOCOL` is enabled.
 - Verify that ARCO `Control Protocol` is set to `Yaesu GS-232`.
 - Check that no firewall blocks the TCP connection.
 
-You can test ARCO manually from a terminal:
+Manual TCP test:
 
 ```bash
 printf 'C\r' | nc -w 2 192.168.15.131 4001
